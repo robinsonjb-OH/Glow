@@ -1,42 +1,45 @@
 import { useMemo, useState } from 'react'
 import {
-  DEFAULT_ROOM,
-  FIXTURE_LIBRARY,
-  SCENE_PRESETS,
+  PROPERTY_TEMPLATES,
+  STYLE_PRESETS,
   createFixtureFromTemplate,
+  starterFixturesFor,
 } from '../data/fixtures'
-import type { FixtureTemplate, PlacedFixture, Room } from '../types'
+import type { FixtureTemplate, LightingStyle, PlacedFixture, PropertyTemplate, Site } from '../types'
 import { FixtureLibrary } from './FixtureLibrary'
 import { Inspector } from './Inspector'
-import { RoomCanvas } from './RoomCanvas'
+import { SiteCanvas } from './SiteCanvas'
 
 interface StudioProps {
   onBack: () => void
 }
 
-function templateById(id: string) {
-  const template = FIXTURE_LIBRARY.find((f) => f.id === id)
-  if (!template) throw new Error(`Missing fixture template: ${id}`)
-  return template
-}
-
-const STARTER_FIXTURES: PlacedFixture[] = [
-  createFixtureFromTemplate(templateById('recessed-downlight'), 0.28, 0.32),
-  createFixtureFromTemplate(templateById('glass-pendant'), 0.52, 0.55),
-  createFixtureFromTemplate(templateById('track-spot'), 0.78, 0.28),
-]
+const DEFAULT_PROPERTY = PROPERTY_TEMPLATES[0]
 
 export function Studio({ onBack }: StudioProps) {
-  const [room, setRoom] = useState<Room>(DEFAULT_ROOM)
-  const [fixtures, setFixtures] = useState<PlacedFixture[]>(STARTER_FIXTURES)
+  const [property, setProperty] = useState<PropertyTemplate>(DEFAULT_PROPERTY)
+  const [site, setSite] = useState<Site>(DEFAULT_PROPERTY.site)
+  const [style, setStyle] = useState<LightingStyle>('traditional')
+  const [fixtures, setFixtures] = useState<PlacedFixture[]>(() =>
+    starterFixturesFor('traditional', DEFAULT_PROPERTY.id),
+  )
   const [selectedTemplate, setSelectedTemplate] = useState<FixtureTemplate | null>(null)
-  const [selectedId, setSelectedId] = useState<string | null>(STARTER_FIXTURES[1]?.id ?? null)
-  const [activePreset, setActivePreset] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const selectedFixture = useMemo(
     () => fixtures.find((f) => f.id === selectedId) ?? null,
     [fixtures, selectedId],
   )
+
+  const loadScene = (nextStyle: LightingStyle, nextProperty: PropertyTemplate) => {
+    const next = starterFixturesFor(nextStyle, nextProperty.id)
+    setStyle(nextStyle)
+    setProperty(nextProperty)
+    setSite(nextProperty.site)
+    setFixtures(next)
+    setSelectedId(next[0]?.id ?? null)
+    setSelectedTemplate(null)
+  }
 
   const handlePlace = (x: number, y: number) => {
     if (!selectedTemplate) return
@@ -44,25 +47,23 @@ export function Studio({ onBack }: StudioProps) {
     setFixtures((prev) => [...prev, next])
     setSelectedId(next.id)
     setSelectedTemplate(null)
-    setActivePreset(null)
   }
 
   const handleChangeFixture = (id: string, patch: Partial<PlacedFixture>) => {
     setFixtures((prev) => prev.map((f) => (f.id === id ? { ...f, ...patch } : f)))
-    setActivePreset(null)
-  }
-
-  const applyPreset = (presetId: string) => {
-    const preset = SCENE_PRESETS.find((p) => p.id === presetId)
-    if (!preset) return
-    setFixtures((prev) => preset.apply(prev))
-    setActivePreset(presetId)
   }
 
   const exportScene = () => {
     const payload = {
-      name: 'LUMEN scene',
-      room,
+      name: 'LUMEN landscape render',
+      style,
+      property: {
+        id: property.id,
+        name: property.name,
+        propertyType: property.propertyType,
+      },
+      site,
+      features: property.features,
       fixtures,
       exportedAt: new Date().toISOString(),
     }
@@ -70,46 +71,49 @@ export function Studio({ onBack }: StudioProps) {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'lumen-scene.json'
+    a.download = `lumen-${property.propertyType}-${style}.json`
     a.click()
     URL.revokeObjectURL(url)
   }
 
   return (
-    <div className="studio">
+    <div className={`studio studio--${style}`}>
       <header className="studio__top">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
           <button type="button" className="btn btn--ghost" onClick={onBack}>
             ← Home
           </button>
-          <div className="studio__brand">LUMEN Studio</div>
+          <div className="studio__brand">LUMEN Outdoor</div>
         </div>
         <div className="studio__actions">
-          {SCENE_PRESETS.map((preset) => (
+          {STYLE_PRESETS.map((preset) => (
             <button
               key={preset.id}
               type="button"
-              className={`chip${activePreset === preset.id ? ' chip--active' : ''}`}
+              className={`chip${style === preset.id ? ' chip--active' : ''}`}
               title={preset.description}
-              onClick={() => applyPreset(preset.id)}
+              onClick={() => loadScene(preset.id, property)}
             >
               {preset.name}
             </button>
           ))}
           <button type="button" className="btn btn--primary" onClick={exportScene}>
-            Export scene
+            Export render
           </button>
         </div>
       </header>
 
       <div className="studio__body">
         <FixtureLibrary
+          style={style}
           selectedTemplateId={selectedTemplate?.id ?? null}
           onSelect={setSelectedTemplate}
         />
-        <RoomCanvas
-          room={room}
+        <SiteCanvas
+          site={site}
+          features={property.features}
           fixtures={fixtures}
+          style={style}
           selectedId={selectedId}
           placing={Boolean(selectedTemplate)}
           onPlace={handlePlace}
@@ -118,13 +122,17 @@ export function Studio({ onBack }: StudioProps) {
         />
         <Inspector
           fixture={selectedFixture}
-          room={room}
+          site={site}
+          style={style}
+          propertyId={property.id}
           onChangeFixture={handleChangeFixture}
           onRemoveFixture={(id) => {
             setFixtures((prev) => prev.filter((f) => f.id !== id))
             if (selectedId === id) setSelectedId(null)
           }}
-          onChangeRoom={(patch) => setRoom((prev) => ({ ...prev, ...patch }))}
+          onChangeSite={(patch) => setSite((prev) => ({ ...prev, ...patch }))}
+          onChangeStyle={(next) => loadScene(next, property)}
+          onChangeProperty={(template) => loadScene(style, template)}
         />
       </div>
     </div>

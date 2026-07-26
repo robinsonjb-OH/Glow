@@ -1,14 +1,18 @@
-# LUMEN — Lighting Design
+# LUMEN — Outdoor Landscape Lighting
 
-An interactive lighting design studio for exploring fixture placement, color temperature, intensity, and beam fall across a room.
+Create landscape lighting renders for homes, commercial buildings, gardens, and other outdoor spaces.
 
-## Features
+## Lighting styles
 
-- **Fixture library** — recessed, pendant, sconce, track, floor uplight, linear cove
-- **Floor plan canvas** — place and drag fixtures on a scalable room
-- **Live light pools** — Kelvin → RGB visualization of warmth and spread
-- **Scene presets** — Evening Lounge, Task Focus, Gallery, Daylight Match
-- **Export** — download the current scene as JSON
+- **Traditional** — path lights, tree uplights, wall wash, well lights, bollards, floods
+- **Bistro / Cafe** — string lights, patio pendants, warm social outdoor ambiance
+- **Holiday** — roofline runs, tree wraps, garlands, multicolor and projection washes
+
+## Property templates
+
+- Residential front yard
+- Commercial building / plaza
+- Landscape garden
 
 ## Develop
 
