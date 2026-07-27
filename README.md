@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # LUMEN — Outdoor Landscape Lighting
 
 Create landscape lighting renders for homes, commercial buildings, gardens, and other outdoor spaces.
@@ -27,3 +28,7 @@ npm run dev
 npm run build
 npm run preview
 ```
+=======
+# Glow
+Glow
+>>>>>>> origin/main
